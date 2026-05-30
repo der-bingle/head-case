@@ -1,0 +1,11 @@
+{
+	"id": "head-case",
+	"name": "Head Case",
+	"version": "0.1.0",
+	"minAppVersion": "1.5.0",
+	"description": "Prose-first title casing for Obsidian headings and selected text.",
+	"author": "Luke",
+	"authorUrl": "https://github.com/der-bingle",
+	"isDesktopOnly": false
+}
+

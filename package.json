@@ -1,0 +1,32 @@
+{
+	"name": "head-case",
+	"version": "0.1.0",
+	"description": "Prose-first title casing for Obsidian headings and selected text.",
+	"main": "main.js",
+	"type": "module",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc --noEmit && node esbuild.config.mjs production",
+		"test": "node --import tsx/esm --test test/*.test.ts"
+	},
+	"keywords": [
+		"obsidian",
+		"title-case",
+		"markdown"
+	],
+	"author": "Luke",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/node": "^22.19.19",
+		"builtin-modules": "^5.2.0",
+		"esbuild": "^0.28.0",
+		"obsidian": "^1.12.3",
+		"tsx": "^4.22.3",
+		"typescript": "^5.9.3"
+	},
+	"engines": {
+		"node": ">=20"
+	},
+	"packageManager": "pnpm@10.34.1"
+}
+
