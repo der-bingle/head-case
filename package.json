@@ -1,6 +1,6 @@
 {
 	"name": "head-case",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Prose-first title casing for Obsidian headings and selected text.",
 	"main": "main.js",
 	"type": "module",
