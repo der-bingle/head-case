@@ -3,11 +3,35 @@ import { SMALL_WORDS, titleCase as titleCaseText } from "title-case";
 export type TitleCaseStyle = "chicago";
 
 export interface TitleCaseOptions {
+  acronyms?: ReadonlySet<string> | readonly string[];
   locale?: string;
   style?: TitleCaseStyle;
 }
 
-const MARKDOWN_LINK_RE = /^(!?\[\[?)(.*?)(\]\]?)(.*)$/u;
+interface NormalizeOptions {
+  acronyms: ReadonlySet<string>;
+  locale?: string;
+}
+
+const DEFAULT_ACRONYMS = new Set([
+  "AI",
+  "API",
+  "CSS",
+  "HTML",
+  "HTTP",
+  "HTTPS",
+  "JSON",
+  "LLM",
+  "OCR",
+  "PDF",
+  "SQL",
+  "UI",
+  "URL",
+  "UX",
+  "XML",
+  "YAML",
+]);
+const WIKILINK_RE = /!?\[\[([^\]]*?)\]\]/gu;
 const MARKDOWN_LINE_PREFIX_RE =
   /^((?:\s{0,3}>\s?)*\s{0,3}(?:#{1,6}\s+|(?:[-*+]|\d+[.)])\s+)?)(.+)$/u;
 const CALLOUT_PREFIX_RE = /^((?:\s{0,3}>\s?)+\[![^\]]+\][+-]?\s*)(.*)$/u;
@@ -30,20 +54,26 @@ const isShouting = (text: string, locale?: string): boolean => {
 const normalizeWordForTitleCase = (
   word: string,
   shouting: boolean,
-  locale?: string,
+  options: NormalizeOptions,
 ): string => {
+  const upper = word.toLocaleUpperCase(options.locale);
+
   if (IS_MANUAL_CASE.test(word)) {
     return word;
   }
 
-  const lower = word.toLocaleLowerCase(locale);
+  const lower = word.toLocaleLowerCase(options.locale);
+
+  if (options.acronyms.has(upper)) {
+    return upper;
+  }
 
   if (shouting) {
     return lower;
   }
 
   if (
-    word === word.toLocaleUpperCase(locale) &&
+    word === upper &&
     /\p{L}/u.test(word) &&
     !SMALL_WORDS.has(lower)
   ) {
@@ -53,18 +83,35 @@ const normalizeWordForTitleCase = (
   return lower;
 };
 
-const normalizeForTitleCase = (text: string, locale?: string): string => {
-  const shouting = isShouting(text, locale);
+const normalizeAcronyms = (
+  acronyms: TitleCaseOptions["acronyms"],
+): ReadonlySet<string> =>
+  new Set([
+    ...DEFAULT_ACRONYMS,
+    ...(acronyms
+      ? Array.from(acronyms).map((acronym) => acronym.toLocaleUpperCase())
+      : []),
+  ]);
+
+const normalizeForTitleCase = (
+  text: string,
+  options: TitleCaseOptions,
+): string => {
+  const shouting = isShouting(text, options.locale);
+  const normalizeOptions = {
+    acronyms: normalizeAcronyms(options.acronyms),
+    locale: options.locale,
+  };
 
   return text.replace(/\S+/gu, (token) =>
     token.replace(WORD_RE, (word) =>
-      normalizeWordForTitleCase(word, shouting, locale),
+      normalizeWordForTitleCase(word, shouting, normalizeOptions),
     ),
   );
 };
 
 const titleCasePlainText = (text: string, options: TitleCaseOptions): string =>
-  titleCaseText(normalizeForTitleCase(text, options.locale), {
+  titleCaseText(normalizeForTitleCase(text, options), {
     locale: options.locale,
   });
 
@@ -89,24 +136,66 @@ const transformMarkdownLineText = (
   return `${linePrefix}${transform(lineText)}`;
 };
 
-const titleCaseMarkdownLink = (
+const splitWikilinkBody = (
+  body: string,
+): { target: string; alias?: string } => {
+  const aliasSeparatorIndex = body.indexOf("|");
+
+  if (aliasSeparatorIndex === -1) {
+    return { target: body };
+  }
+
+  return {
+    alias: body.slice(aliasSeparatorIndex + 1),
+    target: body.slice(0, aliasSeparatorIndex),
+  };
+};
+
+const titleCaseWikilink = (
+  linkText: string,
+  body: string,
+  options: TitleCaseOptions,
+): string => {
+  const { target, alias } = splitWikilinkBody(body);
+
+  if (alias === undefined) {
+    return linkText;
+  }
+
+  const embedPrefix = linkText.startsWith("!") ? "!" : "";
+  return `${embedPrefix}[[${target}|${titleCasePlainText(alias, options)}]]`;
+};
+
+const titleCaseMarkdownLinks = (
   text: string,
   options: TitleCaseOptions,
 ): string => {
-  const match = MARKDOWN_LINK_RE.exec(text);
+  const links: string[] = [];
+  let cursor = 0;
+  let textWithLinkPlaceholders = "";
 
-  if (!match) {
+  for (const match of text.matchAll(WIKILINK_RE)) {
+    const [linkText, body] = match;
+    const linkIndex = match.index ?? 0;
+    const placeholder = `\uE010${links.length}\uE011`;
+
+    textWithLinkPlaceholders += text.slice(cursor, linkIndex);
+    textWithLinkPlaceholders += placeholder;
+    links.push(titleCaseWikilink(linkText, body, options));
+    cursor = linkIndex + linkText.length;
+  }
+
+  if (links.length === 0) {
     return titleCasePlainText(text, options);
   }
 
-  const [, opener, body, closer, rest] = match;
-  const [target, alias] = body.split("|");
+  textWithLinkPlaceholders += text.slice(cursor);
 
-  if (!alias) {
-    return `${opener}${target}${closer}${titleCasePlainText(rest, options)}`;
-  }
-
-  return `${opener}${target}|${titleCasePlainText(alias, options)}${closer}${titleCasePlainText(rest, options)}`;
+  return links.reduce(
+    (restored, link, index) =>
+      restored.replace(`\uE010${index}\uE011`, link),
+    titleCasePlainText(textWithLinkPlaceholders, options),
+  );
 };
 
 const protectCodeSpans = (
@@ -139,7 +228,7 @@ export const toTitleCase = (
   const [protectedText, restoreCodeSpans] = protectCodeSpans(text);
   return restoreCodeSpans(
     transformMarkdownLineText(protectedText, (lineText) =>
-      titleCaseMarkdownLink(lineText, { style: "chicago", ...options }),
+      titleCaseMarkdownLinks(lineText, { style: "chicago", ...options }),
     ),
   );
 };

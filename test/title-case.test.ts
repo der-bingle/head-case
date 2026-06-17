@@ -45,6 +45,27 @@ test("title-cases all-caps selections", () => {
   );
 });
 
+test("preserves known acronyms in all-caps selections", () => {
+  assert.equal(
+    toTitleCase("THE API AND OCR GUIDE", { locale }),
+    "The API and OCR Guide",
+  );
+  assert.equal(
+    toTitleCase("ALL CAPS WITHOUT A KNOWN ACRONYM", { locale }),
+    "All Caps without a Known Acronym",
+  );
+});
+
+test("supports custom acronyms", () => {
+  assert.equal(
+    toTitleCase("THE NASA API LAUNCH WINDOW", {
+      acronyms: ["NASA"],
+      locale,
+    }),
+    "The NASA API Launch Window",
+  );
+});
+
 test("fixes incorrectly capitalized small words", () => {
   assert.equal(toTitleCase("Here And Now", { locale }), "Here and Now");
   assert.equal(
@@ -113,6 +134,50 @@ test("title-cases wikilink aliases after markdown heading markers", () => {
       locale,
     }),
     "## [[Bible/CSB/Romans 8#1|There Is Now No Condemnation]]",
+  );
+});
+
+test("title-cases embedded wikilink aliases without changing targets", () => {
+  assert.equal(
+    toTitleCase(
+      "See [[Bible/CSB/Romans 8#1|there is now no condemnation]] today",
+      { locale },
+    ),
+    "See [[Bible/CSB/Romans 8#1|There Is Now No Condemnation]] Today",
+  );
+});
+
+test("title-cases multiple wikilink aliases in one line", () => {
+  assert.equal(
+    toTitleCase(
+      "read [[Bible/CSB/Romans 8#1|there is now no condemnation]] and [[Bible/CSB/Romans 8#2|the spirit has set you free]] today",
+      { locale },
+    ),
+    "Read [[Bible/CSB/Romans 8#1|There Is Now No Condemnation]] and [[Bible/CSB/Romans 8#2|The Spirit Has Set You Free]] Today",
+  );
+});
+
+test("title-cases wikilink aliases after non-link markdown line starts", () => {
+  assert.equal(
+    toTitleCase(
+      "## see [[Bible/CSB/Romans 8#1|there is now no condemnation]] today",
+      { locale },
+    ),
+    "## See [[Bible/CSB/Romans 8#1|There Is Now No Condemnation]] Today",
+  );
+  assert.equal(
+    toTitleCase(
+      "- see [[Bible/CSB/Romans 8#1|there is now no condemnation]] today",
+      { locale },
+    ),
+    "- See [[Bible/CSB/Romans 8#1|There Is Now No Condemnation]] Today",
+  );
+  assert.equal(
+    toTitleCase(
+      "> [!note] see [[Bible/CSB/Romans 8#1|there is now no condemnation]] today",
+      { locale },
+    ),
+    "> [!note] See [[Bible/CSB/Romans 8#1|There Is Now No Condemnation]] Today",
   );
 });
 
