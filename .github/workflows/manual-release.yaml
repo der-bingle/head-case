@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (e.g. 0.1.1)"
-        required: true
+        description: "Release version (e.g. 0.1.1). Leave blank for the next patch version."
+        required: false
+        default: ""
         type: string
       prerelease:
         description: "Mark as prerelease?"
         required: true
-        default: true
+        default: false
         type: boolean
       release_notes:
         description: "Release description (Markdown supported). Leave blank to auto-generate."
@@ -46,6 +47,34 @@ jobs:
       - name: install
         run: pnpm install --frozen-lockfile
 
+      - name: resolve release version
+        id: release-version
+        run: |
+          node - <<'NODE'
+          const fs = require("fs");
+
+          const inputVersion = process.env.INPUT_VERSION.trim();
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const currentVersion = pkg.version;
+
+          const nextPatchVersion = (version) => {
+            const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
+            if (!match) {
+              console.error(`Cannot derive next patch version from "${version}". Enter a release version manually.`);
+              process.exit(1);
+            }
+
+            const [, major, minor, patch] = match;
+            return `${major}.${minor}.${Number(patch) + 1}`;
+          };
+
+          const releaseVersion = inputVersion || nextPatchVersion(currentVersion);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${releaseVersion}\n`);
+          console.log(`Release version: ${releaseVersion}`);
+          NODE
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+
       - name: bump versions in json
         run: |
           node - <<'NODE'
@@ -75,7 +104,7 @@ jobs:
           writeJson("versions.json", versions);
           NODE
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ steps.release-version.outputs.version }}
 
       - name: update lockfile
         run: pnpm install --lockfile-only
@@ -85,13 +114,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json pnpm-lock.yaml manifest.json versions.json
-          git commit -m "chore(release): ${{ inputs.version }}" || echo "No changes to commit"
+          git commit -m "chore(release): ${{ steps.release-version.outputs.version }}" || echo "No changes to commit"
           git push
 
       - name: create tag
         run: |
-          git tag "${{ inputs.version }}"
-          git push origin "${{ inputs.version }}"
+          git tag "${{ steps.release-version.outputs.version }}"
+          git push origin "${{ steps.release-version.outputs.version }}"
 
       - name: build
         run: pnpm build
@@ -104,8 +133,8 @@ jobs:
       - name: create github release + upload assets
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ inputs.version }}
-          name: ${{ inputs.version }}
+          tag_name: ${{ steps.release-version.outputs.version }}
+          name: ${{ steps.release-version.outputs.version }}
           prerelease: ${{ inputs.prerelease }}
           generate_release_notes: ${{ inputs.release_notes == '' }}
           body: ${{ inputs.release_notes }}
