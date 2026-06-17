@@ -12,6 +12,15 @@ Head Case exists because code-oriented case tools are good at `snake_case` and `
 - `Head Case: UPPER CASE`
 - `Head Case: Select case transform`
 
+## Installation
+
+### Via BRAT (Pre-release)
+1. Install the [Obsidian42 - BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin from the Community Plugins in Obsidian.
+2. Enable BRAT in your settings.
+3. Open the BRAT settings and click "Add Beta plugin".
+4. Enter the GitHub repository URL for this plugin: `der-bingle/head-case`.
+5. Enable the "Head Case" plugin in your Obsidian Community Plugins settings.
+
 ## Development
 
 ```bash

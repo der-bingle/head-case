@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      title-case:
+        specifier: ^4.3.2
+        version: 4.3.2
     devDependencies:
       '@types/node':
         specifier: ^22.19.19
@@ -235,6 +239,9 @@ packages:
   style-mod@4.1.3:
     resolution: {integrity: sha512-i/n8VsZydrugj3Iuzll8+x/00GH2vnYsk1eomD8QiRrSAeW6ItbCQDtfXCeJHd0iwiNagqjQkvpvREEPtW3IoQ==}
 
+  title-case@4.3.2:
+    resolution: {integrity: sha512-I/nkcBo73mO42Idfv08jhInV61IMb61OdIFxk+B4Gu1oBjWBPOLmhZdsli+oJCVaD+86pYQA93cJfFt224ZFAA==}
+
   tsx@4.22.3:
     resolution: {integrity: sha512-mdoNxBC/cSQObGGVQ5Bpn5i+yv7j68gk3Nfm3wFjcJg3Z0Mix9jzAFfP12prmm5eVGmDKtp0yyArrs0Q+8gZHg==}
     engines: {node: '>=18.0.0'}
@@ -404,6 +411,8 @@ snapshots:
       moment: 2.29.4
 
   style-mod@4.1.3: {}
+
+  title-case@4.3.2: {}
 
   tsx@4.22.3:
     dependencies:

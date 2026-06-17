@@ -4,10 +4,10 @@ import {
 	EditorPosition,
 	EditorSelection,
 	FuzzySuggestModal,
+	getLanguage,
 	Plugin,
 } from "obsidian";
 import { CommandFn, HeadCaseCommand, commands } from "./commands";
-import { getLanguage } from "./language";
 
 const normalizeSelection = ({
 	anchor,
@@ -82,4 +82,3 @@ export default class HeadCasePlugin extends Plugin {
 		}
 	}
 }
-
